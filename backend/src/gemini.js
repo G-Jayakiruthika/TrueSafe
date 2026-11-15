@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { config } from './config.js';
 
-const MODEL = 'gemini-2.5-flash'; // required model for all end-user analysis
+const MODEL = config.geminiModel || 'gemini-3.8-flash';
 const ai = config.geminiKey ? new GoogleGenAI({ apiKey: config.geminiKey }) : null;
 
 const LANG = { en: 'English', ta: 'Tamil', hi: 'Hindi' };

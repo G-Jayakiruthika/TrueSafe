@@ -15,7 +15,7 @@ export const config = {
   isProd,
   port: Number(process.env.PORT) || 8080,
   geminiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   jwtSecret: secret('JWT_SECRET'),
   csrfSecret: secret('CSRF_SECRET'),
   webhookSecret: process.env.WEBHOOK_SECRET || '',
