@@ -1,3 +1,5 @@
+import { DEMO, demoApi } from './demo.js';
+
 const BASE = import.meta.env.VITE_API_URL || '';
 let csrf = null;
 
@@ -21,7 +23,7 @@ async function req(path, opts = {}) {
 }
 const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-export const api = {
+const serverApi = {
   me: () => req('/api/me'),
   login: (phone, otp) => req('/api/auth/login', json('POST', { phone, otp, website: '' })),
   logout: () => req('/api/auth/logout', { method: 'POST' }),
@@ -31,3 +33,12 @@ export const api = {
   upload: (file) => { const f = new FormData(); f.append('photo', file); return req('/api/upload', { method: 'POST', body: f }); },
   deleteMyData: () => req('/api/me/data', { method: 'DELETE' }),
 };
+
+/**
+ * The static preview on GitHub Pages has no server, so it runs against the local
+ * demo module instead. The switch is decided at build time (VITE_DEMO=1) and never
+ * at runtime: a real deployment whose API is briefly unreachable must fail, not
+ * quietly hand out a session.
+ */
+export const api = DEMO ? demoApi : serverApi;
+export const isDemo = DEMO;

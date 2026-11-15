@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Cinematic hero: autoplaying, looping, muted HTML5 video. Drop a clip at public/hero.mp4 / hero.webm.
+ * Cinematic hero: autoplaying, looping, muted HTML5 video. Drop a clip at public/hero.mp4 / hero.webm
+ * and build with VITE_HERO=1 to switch it on.
  * A canvas animation of threats being blocked is rendered underneath as a poster/fallback so the hero is never empty.
  */
 function ThreatCanvas() {
@@ -38,16 +39,21 @@ function ThreatCanvas() {
   return <canvas ref={ref} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
 }
 
+/**
+ * No clip ships with the repo, so the video layer is opt-in: build with
+ * VITE_HERO=1 once a file exists at public/hero.mp4. Without it the canvas is the
+ * hero on its own, and the browser is never asked for a file that is not there.
+ */
 export default function HeroVideo() {
-  const [ok, setOk] = useState(true);
+  const [ok, setOk] = useState(import.meta.env.VITE_HERO === '1');
   return (
     <figure className="card relative h-56 overflow-hidden sm:h-72" aria-label="Looping demo: cyber threats being blocked by TrueSafe">
       <ThreatCanvas />
       {ok && (
         <video className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline preload="metadata" aria-hidden="true" tabIndex={-1}
           onError={() => setOk(false)}>
-          <source src="/hero.webm" type="video/webm" onError={() => {}} />
-          <source src="/hero.mp4" type="video/mp4" onError={() => setOk(false)} />
+          <source src={`${import.meta.env.BASE_URL}hero.webm`} type="video/webm" onError={() => {}} />
+          <source src={`${import.meta.env.BASE_URL}hero.mp4`} type="video/mp4" onError={() => setOk(false)} />
         </video>
       )}
       <figcaption className="absolute bottom-3 left-4 rounded-full bg-bg/90 px-3 py-1 text-sm font-semibold">Threats blocked in real time</figcaption>

@@ -1,0 +1,56 @@
+# Publishes a static, front-end-only preview of TrueSafe to GitHub Pages.
+#
+# The real app needs the Express backend on Cloud Run. This build sets VITE_DEMO=1,
+# which swaps the API client for the local demo module, so the whole interface can
+# be walked through from a static host with no server, no keys and no database.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+        working-directory: frontend
+
+      - name: Build the static preview
+        working-directory: frontend
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_DEMO: '1'
+        run: npm run build
+
+      - name: SPA fallback and no-Jekyll
+        working-directory: frontend/dist
+        # Pages serves 404.html for any unknown path, which is how a client-side
+        # router survives a deep link or a refresh on a static host.
+        run: |
+          cp index.html 404.html
+          touch .nojekyll
+
+      - name: Publish to the gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: frontend/dist
+          publish_branch: gh-pages
+          force_orphan: true
