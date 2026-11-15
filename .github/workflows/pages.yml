@@ -11,17 +11,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # enablement:true switches Pages on the first time this runs, so the repo
+      # needs no manual setup, and reports the base URL the site will be served at.
+      - uses: actions/configure-pages@v5
+        id: pages
+        with:
+          enablement: true
 
       - uses: actions/setup-node@v4
         with:
@@ -35,7 +44,7 @@ jobs:
       - name: Build the static preview
         working-directory: frontend
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}/
           VITE_DEMO: '1'
         run: npm run build
 
@@ -47,10 +56,19 @@ jobs:
           cp index.html 404.html
           touch .nojekyll
 
-      - name: Publish to the gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: frontend/dist
-          publish_branch: gh-pages
-          force_orphan: true
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
