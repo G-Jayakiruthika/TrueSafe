@@ -1,0 +1,92 @@
+name: ci-deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'   # weekly CodeQL
+
+permissions:
+  contents: read
+
+env:
+  REGION: asia-south1
+  SERVICE: truesafe-api
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v3
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (git history secret scan)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # If a secret is ever found: rotate it FIRST, then purge history, e.g.
+      #   git filter-repo --invert-paths --path backend/.env
+      # (git-secret/git-filter-repo purge is a manual, approved action; CI only detects.)
+
+  audit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: npm audit --omit=dev --audit-level=high
+        working-directory: backend
+      - run: npm run build
+        working-directory: frontend
+      - run: node run-security-audit.js
+
+  deploy:
+    needs: [codeql, secret-scan, audit-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # Workload Identity Federation: no long-lived JSON keys
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build & push image
+        run: |
+          gcloud builds submit --tag "$REGION-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/truesafe/api:${{ github.sha }}" .
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "$REGION-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/truesafe/api:${{ github.sha }}" \
+            --region "$REGION" --platform managed --allow-unauthenticated \
+            --port 8080 --min-instances 0 --max-instances 10 --concurrency 80 \
+            --set-env-vars NODE_ENV=production,ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }},MOCK_OTP=false \
+            --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest,JWT_SECRET=JWT_SECRET:latest,CSRF_SECRET=CSRF_SECRET:latest,WEBHOOK_SECRET=WEBHOOK_SECRET:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest

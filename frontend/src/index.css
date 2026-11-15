@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Mode (text/surface) ---- */
+:root[data-mode='dark']  { --fg: 245 249 255; --muted: 195 207 240; }
+:root[data-mode='light'] { --fg: 10 21 48;    --muted: 52 65 95; }
+
+/* ---- State palettes: BlueDragon(neutral) / Lionfish(scam) / PeacockMantis(safe) / Starfish(civic) / MoonJellyfish(voice) ----
+   Every accent/onaccent pair is >= 7:1 (WCAG AAA). Values are RGB channels. */
+:root[data-mode='dark'][data-state='neutral']  { --bg: 5 11 31;  --accent: 143 180 255; --onaccent: 4 16 46;   --a2: 192 200 214; --a3: 40 80 220; }
+:root[data-mode='light'][data-state='neutral'] { --bg: 244 248 255; --accent: 10 42 138; --onaccent: 255 255 255; --a2: 140 175 240; --a3: 192 200 214; }
+:root[data-mode='dark'][data-state='scam']     { --bg: 20 6 8;   --accent: 255 154 122; --onaccent: 26 6 5;    --a2: 150 20 45; --a3: 245 233 210; }
+:root[data-mode='light'][data-state='scam']    { --bg: 255 249 236; --accent: 122 18 32; --onaccent: 255 249 236; --a2: 183 65 14; --a3: 120 20 40; }
+:root[data-mode='dark'][data-state='safe']     { --bg: 8 8 26;   --accent: 94 234 212;  --onaccent: 6 32 28;   --a2: 217 70 239; --a3: 163 230 53; }
+:root[data-mode='light'][data-state='safe']    { --bg: 247 244 255; --accent: 11 90 82; --onaccent: 255 255 255; --a2: 168 85 247; --a3: 132 204 22; }
+:root[data-mode='dark'][data-state='civic']    { --bg: 28 14 10; --accent: 255 184 154; --onaccent: 42 15 5;   --a2: 196 106 72; --a3: 128 203 182; }
+:root[data-mode='light'][data-state='civic']   { --bg: 255 245 236; --accent: 126 52 24; --onaccent: 255 255 255; --a2: 255 190 160; --a3: 128 203 182; }
+:root[data-mode='dark'][data-state='voice']    { --bg: 20 14 40; --accent: 212 196 255; --onaccent: 26 16 56;  --a2: 244 190 210; --a3: 235 230 245; }
+:root[data-mode='light'][data-state='voice']   { --bg: 248 244 255; --accent: 75 42 154; --onaccent: 255 255 255; --a2: 200 170 255; --a3: 250 200 220; }
+
+html { color-scheme: dark light; scroll-behavior: smooth; }
+body {
+  background: rgb(var(--bg)); color: rgb(var(--fg));
+  font-family: Inter, system-ui, 'Noto Sans Tamil', 'Noto Sans Devanagari', sans-serif;
+  transition: background-color .6s ease, color .3s ease;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+:focus-visible { outline: 3px solid rgb(var(--accent)); outline-offset: 3px; border-radius: 6px; }
+.skip-link { position: absolute; left: -999px; top: 8px; z-index: 100; background: rgb(var(--accent)); color: rgb(var(--onaccent)); padding: 8px 14px; border-radius: 8px; }
+.skip-link:focus { left: 8px; }
+
+.card { @apply rounded-3xl border border-fg/25 bg-bg/85 backdrop-blur-xl; }
+.btn { @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition active:scale-95; }
+.btn-primary { @apply btn bg-accent text-onaccent hover:brightness-110; }
+.btn-ghost { @apply btn border border-fg/40 text-fg hover:bg-fg/10; }
+.grad-text { background: linear-gradient(90deg, rgb(var(--accent)), rgb(var(--a2)), rgb(var(--a3))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+@media (pointer: fine) { body.custom-cursor, body.custom-cursor * { cursor: none; } body.custom-cursor input, body.custom-cursor textarea { cursor: text; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
